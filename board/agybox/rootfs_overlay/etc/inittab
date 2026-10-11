@@ -1,0 +1,13 @@
+# /etc/inittab - Agy Box console startup
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mkdir -p /dev/pts /dev/shm /run/lock
+::sysinit:/bin/mount -t devpts devpts /dev/pts
+::sysinit:/etc/init.d/rcS
+
+# Local and QEMU serial consoles
+tty1::respawn:/sbin/getty -L tty1 0 vt100
+ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt100
+
+::ctrlaltdel:/sbin/reboot
+::shutdown:/etc/init.d/rcK
+::shutdown:/bin/umount -a -r

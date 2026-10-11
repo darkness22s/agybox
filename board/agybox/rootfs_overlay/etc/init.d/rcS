@@ -1,0 +1,18 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export PATH
+
+mountpoint -q /proc || mount -t proc proc /proc
+mountpoint -q /sys || mount -t sysfs sysfs /sys
+mountpoint -q /dev || mount -t devtmpfs devtmpfs /dev
+mountpoint -q /run || mount -t tmpfs -o mode=0755,nosuid,nodev,size=8m tmpfs /run
+mountpoint -q /tmp || mount -t tmpfs -o mode=1777,nosuid,nodev,size=32m tmpfs /tmp
+
+ip link set lo up 2>/dev/null || true
+if ip link show eth0 >/dev/null 2>&1; then
+    ip link set eth0 up 2>/dev/null || true
+    udhcpc -i eth0 -b -q 2>/dev/null || true
+fi
+
+printf '\nAgy Box is ready. Root filesystem is temporary; session changes are not saved.\n'
