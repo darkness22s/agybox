@@ -1,0 +1,57 @@
+name: Build Agy Box guest
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build custom Linux guest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Check out Agy Box and Buildroot
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Buildroot host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison build-essential cpio file flex git libncurses-dev libssl-dev \
+            make patch python3 rsync unzip wget xz-utils
+
+      - name: Configure Agy Box
+        run: >-
+          make -C buildroot O="$RUNNER_TEMP/agybox-output"
+          BR2_EXTERNAL="$GITHUB_WORKSPACE"
+          BR2_DEFCONFIG="$GITHUB_WORKSPACE/configs/agybox_x86_64_defconfig"
+          defconfig
+
+      - name: Build kernel and initramfs
+        run: >-
+          make -C buildroot O="$RUNNER_TEMP/agybox-output"
+          BR2_EXTERNAL="$GITHUB_WORKSPACE" -j2
+
+      - name: Verify guest images
+        run: |
+          test -s "$RUNNER_TEMP/agybox-output/images/bzImage"
+          test -s "$RUNNER_TEMP/agybox-output/images/rootfs.cpio.gz"
+          file "$RUNNER_TEMP/agybox-output/images/bzImage"
+          file "$RUNNER_TEMP/agybox-output/images/rootfs.cpio.gz"
+
+      - name: Upload Agy Box guest images
+        uses: actions/upload-artifact@v4
+        with:
+          name: agybox-guest-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/agybox-output/images/bzImage
+            ${{ runner.temp }}/agybox-output/images/rootfs.cpio.gz
+          if-no-files-found: error
+          retention-days: 14
